@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>GST Calculator</title>
+  <style>
+    :root{
+      --bg: #0b1020;
+      --card: #121a33;
+      --muted: #8ea0c6;
+      --text: #e9eefc;
+      --accent: #6aa0ff;
+      --accent-2: #7de1c3;
+      --error: #ff6b6b;
+      --ring: rgba(106,160,255,.35);
+      --shadow: 0 10px 30px rgba(0,0,0,.35);
+    }
+    @media (prefers-color-scheme: light){
+      :root{
+        --bg: #f5f7ff;
+        --card: #ffffff;
+        --muted: #5e6b85;
+        --text: #0b1020;
+        --accent: #2b62ff;
+        --accent-2: #0f9b74;
+        --error: #d94141;
+        --ring: rgba(43,98,255,.25);
+        --shadow: 0 12px 30px rgba(43,67,121,.12);
+      }
+    }
+    *{box-sizing: border-box}
+    body{
+      margin:0; font-family: ui-sans-serif, system-ui, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+      background: radial-gradient(1200px 600px at 10% 0%, rgba(106,160,255,.2), transparent 40%),
+                  radial-gradient(900px 500px at 90% 20%, rgba(125,225,195,.18), transparent 40%),
+                  var(--bg);
+      color: var(--text);
+      min-height:100svh;
+      display:grid; place-items:center; padding: 24px;
+    }
+    .container{
+      width: 100%; max-width: 820px; display: grid; gap: 18px;
+    }
+    .heading{ text-align:center; }
+    .title{ font-size: clamp(22px, 3.5vw, 34px); margin:0 0 6px; letter-spacing:.2px }
+    .subtitle{ margin:0; color: var(--muted); font-size: 14px }
+
+    .card{
+      background: linear-gradient(180deg, var(--card), color-mix(in oklab, var(--card), black 4%));
+      border: 1px solid color-mix(in oklab, var(--card), white 10%);
+      border-radius: 18px; padding: 20px; box-shadow: var(--shadow);
+      display:grid; gap: 16px;
+    }
+    .grid{ display:grid; grid-template-columns: 1fr; gap:14px }
+    @media (min-width: 720px){ .grid{ grid-template-columns: 1fr 1fr } }
+
+    label{ display:block; font-size: 13px; color: var(--muted); margin-bottom: 6px }
+    .field{ position:relative }
+    input, select{
+      width:100%; padding:14px 14px; border-radius:12px; border:1px solid color-mix(in oklab, var(--card), white 16%);
+      outline:none; background: color-mix(in oklab, var(--card), black 3%); color:var(--text);
+      font-size: 16px; transition: box-shadow .2s, border-color .2s, transform .04s;
+    }
+    input:focus, select:focus{ border-color: var(--accent); box-shadow: 0 0 0 6px var(--ring) }
+    .row{ display:flex; gap:10px; flex-wrap: wrap }
+
+    button{
+      appearance:none; border:none; cursor:pointer; padding:12px 16px; border-radius:12px; font-weight:600;
+      transition: transform .06s ease, filter .15s ease, box-shadow .15s ease; font-size: 15px
+    }
+    .btn-primary{ background: linear-gradient(180deg, color-mix(in oklab, var(--accent), white 12%), var(--accent)); color:white }
+    .btn-ghost{ background: transparent; border:1px solid color-mix(in oklab, var(--card), white 16%); color:var(--text) }
+    .btn-primary:active{ transform: translateY(1px) scale(.995) }
+    .btn-ghost:active{ transform: translateY(1px) scale(.995) }
+
+    .result{ display:grid; gap:10px; padding:14px; border-radius:14px; border:1px dashed color-mix(in oklab, var(--card), white 18%);
+      background: color-mix(in oklab, var(--card), white 3%);
+    }
+    .result-item{ display:flex; align-items:center; justify-content:space-between; font-size:16px }
+    .muted{ color: var(--muted) }
+    .badge{ font-size:12px; padding:6px 10px;  }
+    .ok{ color: var(--accent-2) }
+    .err{ color: var(--error) }
+
+    .note{ font-size: 12px; color: var(--muted) }
+    .footer{ text-align:center; font-size: 12px; color: var(--muted) }
+  </style>
+</head>
+<body>
+  <main class="container" role="main">
+    <section class="heading" aria-label="Header">
+      <h1 class="title">GST Calculator</h1>
+      <p class="subtitle">Enter the original price and GST rate to get the tax amount and grand total. (Designed for ₹, works for any currency.)</p>
+    </section>
+
+    <section class="card" aria-label="Calculator">
+      <div class="grid">
+        <div class="field">
+          <label for="price">Original Price</label>
+          <input id="price" type="number" min="0" step="0.01" placeholder="e.g., 999.00" inputmode="decimal" />
+        </div>
+        <div class="field">
+          <label for="gst">GST Rate (%)</label>
+          <input id="gst" type="number" min="0" max="100" step="0.1" placeholder="e.g., 18" inputmode="decimal" />
+        </div>
+      </div>
+
+      <div class="row">
+        <button id="calc" class="btn-primary" aria-label="Calculate total with GST">Calculate</button>
+        <button id="reset" class="btn-ghost" aria-label="Reset form">Reset</button>
+        <span id="status" class="badge muted" aria-live="polite"></span>
+      </div>
+
+      <div class="result" aria-live="polite" aria-atomic="true">
+        <div class="result-item"><span class="muted">Original Price</span> <strong id="out-price">—</strong></div>
+        <div class="result-item"><span class="muted">GST Rate</span> <strong id="out-rate">—</strong></div>
+        <div class="result-item"><span class="muted">GST Amount</span> <strong id="out-tax">—</strong></div>
+        <div class="result-item"><span class="muted">Total (Price + GST)</span> <strong id="out-total">—</strong></div>
+      </div>
+      <p class="note">Tip: You can press <kbd>Enter</kbd> inside an input to calculate quickly.</p>
+    </section>
+
+    <p class="footer">Made with plain HTML, CSS, and JavaScript • Works offline</p>
+  </main>
+
+  <script>
+    // Format numbers to Indian currency by default (can work for any currency symbol)
+    const formatCurrency = (value) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 2 }).format(value);
+
+    const el = (id) => document.getElementById(id);
+
+    function validate(price, rate){
+      const errors = [];
+      if (Number.isNaN(price)) errors.push('Enter a valid price.');
+      if (Number.isNaN(rate)) errors.push('Enter a valid GST rate.');
+      if (price < 0) errors.push('Price cannot be negative.');
+      if (rate < 0 || rate > 100) errors.push('GST rate must be between 0 and 100.');
+      return errors;
+    }
+
+    function calculate(){
+      const price = parseFloat(el('price').value);
+      const rate = parseFloat(el('gst').value);
+      const status = el('status');
+
+      const errors = validate(price, rate);
+      if (errors.length){
+        status.textContent = errors[0];
+        status.className = 'badge err';
+        // Clear outputs but keep previous values visible if already computed
+        el('out-price').textContent = '—';
+        el('out-rate').textContent = '—';
+        el('out-tax').textContent = '—';
+        el('out-total').textContent = '—';
+        return;
+      }
+
+      const gstAmount = price * rate / 100.0;
+      const total = price + gstAmount;
+
+      el('out-price').textContent = formatCurrency(price);
+      el('out-rate').textContent = rate.toFixed(2) + '%';
+      el('out-tax').textContent = formatCurrency(gstAmount);
+      el('out-total').textContent = formatCurrency(total);
+
+      status.textContent = 'Calculated successfully';
+      status.className = 'badge ok';
+    }
+
+    function resetAll(){
+      el('price').value = '';
+      el('gst').value = '';
+      el('out-price').textContent = '—';
+      el('out-rate').textContent = '—';
+      el('out-tax').textContent = '—';
+      el('out-total').textContent = '—';
+      const status = el('status');
+      status.textContent = 'Cleared';
+      status.className = 'badge muted';
+      el('price').focus();
+    }
+
+    // Wire up events
+    el('calc').addEventListener('click', calculate);
+    el('reset').addEventListener('click', resetAll);
+    ['price','gst'].forEach(id => el(id).addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); calculate(); }
+    }));
+
+    // Optional: Pre-fill demo values for quick testing
+    if (!el('price').value && !el('gst').value){
+      el('price').value = '999';
+      el('gst').value = '18';
+    }
+  </script>
+</body>
+</html>
